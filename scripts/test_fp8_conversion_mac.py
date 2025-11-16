@@ -131,31 +131,27 @@ def main():
     print("\n[4/5] Converting to Orbax FP8 format...")
     print("  This will take 2-5 minutes...")
 
+    # Clean up existing checkpoint if it exists
+    if Path(orbax_path).exists():
+        print(f"  Removing existing checkpoint: {orbax_path}")
+        import shutil
+        shutil.rmtree(orbax_path)
+
     ram_start = get_ram_gb()
     print(f"  Starting RAM: {ram_start:.2f} GB")
     t0 = time.time()
 
     # Load and convert on CPU
     with jax.default_device(jax.devices('cpu')[0]):
-        # Load weights as BF16
-        print(f"\n  Loading SafeTensors as BF16...")
+        # Load weights directly as FP8 (MXFP4 → FP8, skip BF16 intermediate)
+        print(f"\n  Loading SafeTensors directly as FP8...")
+        print(f"  (MXFP4 weights decompress directly to FP8, BF16 weights convert to FP8)")
         loader = WeightLoader(str(safetensors_path))
-        params = loader.load_params(config, show_progress=True)
+        params = loader.load_params(config, target_dtype=DTYPE, show_progress=True)
 
         ram_after_load = get_ram_gb()
         delta_load = ram_after_load - ram_start
-        print(f"\n  After loading BF16: {ram_after_load:.2f} GB (+{delta_load:.2f} GB)")
-
-        # Convert BF16 → FP8
-        print(f"\n  Converting BF16 → FP8...")
-        params = jax.tree_util.tree_map(
-            lambda x: x.astype(DTYPE) if x.dtype == jnp.bfloat16 else x,
-            params
-        )
-
-        ram_after_fp8 = get_ram_gb()
-        delta_fp8 = ram_after_fp8 - ram_start
-        print(f"  After FP8 conversion: {ram_after_fp8:.2f} GB (+{delta_fp8:.2f} GB total)")
+        print(f"\n  After loading FP8: {ram_after_load:.2f} GB (+{delta_load:.2f} GB)")
 
     # Save to Orbax
     print(f"\n  Saving to Orbax checkpoint...")
@@ -186,13 +182,11 @@ def main():
     print(f"  After cleanup: {ram_after_cleanup:.2f} GB ({freed:.2f} GB freed)")
     print(f"\n  RAM breakdown:")
     print(f"    - Starting:        {ram_start:.2f} GB")
-    print(f"    - After BF16 load: {ram_after_load:.2f} GB (+{delta_load:.2f} GB)")
-    print(f"    - After FP8 conv:  {ram_after_fp8:.2f} GB (+{delta_fp8:.2f} GB)")
+    print(f"    - After FP8 load:  {ram_after_load:.2f} GB (+{delta_load:.2f} GB)")
     print(f"    - Peak (save):     {ram_peak:.2f} GB (+{delta_peak:.2f} GB)")
-    print(f"\n  Expected ranges:")
-    print(f"    - BF16 load: +40-44 GB (21B params × 2 bytes)")
-    print(f"    - FP8 conv:  +20-22 GB (50% reduction)")
-    print(f"    - Peak:      +25-30 GB (temporary during save)")
+    print(f"\n  Expected ranges (direct MXFP4→FP8 conversion):")
+    print(f"    - FP8 load:  +20-22 GB (21B params × 1 byte, no BF16 intermediate)")
+    print(f"    - Peak:      +25-30 GB (temporary during Orbax save)")
 
     print("\n" + "=" * 70)
     print("✓ FP8 CONVERSION TEST PASSED")
