@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import orbax.checkpoint as ocp
 import jax.numpy as jnp
+from tqdm import tqdm
 
 # Import MXFP4 unpacking utilities
 from .mx_formats import unpack_quantized_param_tree
@@ -113,16 +114,38 @@ class OrbaxWeightLoader:
             checkpoint_dir = state_path
 
         if show_progress:
-            print(f"  Loading from: {checkpoint_dir}")
+            # Show relative path if possible
+            try:
+                rel_path = Path(checkpoint_dir).relative_to(Path.cwd())
+                print(f"  Loading from: {rel_path}")
+            except ValueError:
+                pass
 
-        # Load checkpoint
+        # Load checkpoint with progress bar
+        if show_progress:
+            # Create progress bar for loading (simple approach without threading)
+            pbar = tqdm(total=100, desc="Loading checkpoint", unit="%", 
+                       bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}% [{elapsed}]')
+            pbar.set_description("Restoring checkpoint files...")
+            pbar.update(10)  # Start at 10%
+        
         checkpointer = ocp.PyTreeCheckpointer()
+        
+        # Restore checkpoint (this is the slow part, but we can't track internal progress)
         params = checkpointer.restore(str(checkpoint_dir))
+        
+        if show_progress:
+            pbar.n = 80  # Set to 80% after restore completes
+            pbar.refresh()
+            pbar.set_description("Translating parameter structure...")
 
         # Translate Orbax structure to JAX model structure
-        if show_progress:
-            print(f"  Translating parameter structure...")
         params = translate_orbax_to_model_structure(params)
+        
+        if show_progress:
+            pbar.update(20)  # Complete to 100%
+            pbar.set_description("Loading checkpoint")
+            pbar.close()
 
         if show_progress:
             print(f"  ✓ Loaded {len(params)} top-level parameter groups")

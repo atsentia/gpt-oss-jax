@@ -6,13 +6,14 @@ Provides a unified interface for token generation that matches other backends.
 import jax
 import jax.numpy as jnp
 from pathlib import Path
-from typing import List, Optional, Iterator, Tuple
+from typing import List, Optional, Iterator, Tuple, Union
 
 from .model import Transformer
 from .config import ModelConfig
 from .inference import generate
 from .loader_orbax import OrbaxWeightLoader, load_config_from_orbax
 from .loader_safetensors import WeightLoader
+from gpt_oss.tokenizer import get_tokenizer
 
 
 def _detect_checkpoint_format(checkpoint_path: str) -> str:
@@ -125,6 +126,12 @@ class TokenGenerator:
         self.checkpoint_path = checkpoint_path
         self.max_context_length = max_context_length
         
+        # Initialize tokenizer
+        self.tokenizer = get_tokenizer()
+        
+        # Conversation history for chat interface
+        self.conversation_history = []
+        
         # Detect checkpoint format
         self.checkpoint_format = _detect_checkpoint_format(checkpoint_path)
         print(f"[TokenGenerator] Detected checkpoint format: {self.checkpoint_format}")
@@ -152,62 +159,138 @@ class TokenGenerator:
         
         print(f"[TokenGenerator] Ready for generation")
     
+    def _format_conversation(self, include_user_message: Optional[str] = None) -> str:
+        """Format conversation history, optionally including a new user message.
+        
+        Args:
+            include_user_message: Optional new user message to include (not added to history)
+            
+        Returns:
+            Formatted conversation string ready for tokenization
+        """
+        # Format conversation (simple format: "User: ... Assistant: ... User: ...")
+        formatted = []
+        for msg in self.conversation_history:
+            if msg["role"] == "user":
+                formatted.append(f"User: {msg['content']}")
+            else:
+                formatted.append(f"Assistant: {msg['content']}")
+        
+        # Add new user message if provided (not yet in history)
+        if include_user_message is not None:
+            formatted.append(f"User: {include_user_message}")
+        
+        # Add "Assistant: " prefix for next response
+        formatted.append("Assistant: ")
+        
+        return "\n".join(formatted)
+    
+    def _truncate_conversation(self, max_tokens: int, new_user_message: str):
+        """Truncate conversation history if it exceeds context length.
+        
+        Args:
+            max_tokens: Maximum number of tokens allowed
+            new_user_message: New user message to include in token count
+        """
+        # Estimate tokens in current history + new message
+        formatted = self._format_conversation(include_user_message=new_user_message)
+        # Remove the "Assistant: " suffix we added
+        formatted = formatted.rsplit("Assistant: ", 1)[0]
+        current_tokens = self.tokenizer.encode(formatted)
+        
+        # If within limit, no truncation needed
+        if len(current_tokens) <= max_tokens:
+            return
+        
+        # Remove oldest messages until we're within limit
+        # Keep at least the last user message
+        while len(self.conversation_history) > 1:
+            # Remove oldest message pair (user + assistant)
+            if len(self.conversation_history) >= 2:
+                self.conversation_history.pop(0)  # Remove oldest user
+                if self.conversation_history and self.conversation_history[0]["role"] == "assistant":
+                    self.conversation_history.pop(0)  # Remove corresponding assistant
+            
+            # Check if we're within limit now
+            formatted = self._format_conversation(include_user_message=new_user_message)
+            formatted = formatted.rsplit("Assistant: ", 1)[0]
+            current_tokens = self.tokenizer.encode(formatted)
+            if len(current_tokens) <= max_tokens:
+                break
+    
     def generate(
         self,
-        tokens: List[int],
+        prompt: Optional[str] = None,
+        tokens: Optional[List[int]] = None,
         stop_tokens: Optional[List[int]] = None,
         temperature: float = 0.0,
         max_tokens: Optional[int] = None,
-        return_logprobs: bool = False
-    ) -> Iterator[Tuple[int, float]]:
-        """Generate tokens from prompt.
+        max_new_tokens: Optional[int] = None,
+        return_logprobs: bool = False,
+        stream: bool = False
+    ) -> Union[str, Iterator[str], Iterator[Tuple[int, float]]]:
+        """Generate response from prompt string or tokens.
         
         Args:
-            tokens: Input token IDs (prompt)
+            prompt: Input text (if provided, tokens is ignored)
+            tokens: Input token IDs (if prompt not provided)
             stop_tokens: List of token IDs that stop generation (optional)
             temperature: Sampling temperature (0.0 = greedy)
-            max_tokens: Maximum number of tokens to generate (None = unlimited)
-            return_logprobs: Whether to return log probabilities
+            max_tokens: Maximum number of tokens to generate (deprecated, use max_new_tokens)
+            max_new_tokens: Maximum number of tokens to generate (None = unlimited)
+            return_logprobs: Whether to return log probabilities (only for token-based generation)
+            stream: Whether to stream output character-by-character (only for prompt-based generation)
             
-        Yields:
-            Tuple of (token_id, logprob) for each generated token
-            If return_logprobs=False, logprob will be 0.0
+        Returns:
+            If prompt provided and stream=False: Generated text (str)
+            If prompt provided and stream=True: Iterator[str] yielding characters
+            If tokens provided: Iterator[Tuple[int, float]] yielding (token_id, logprob)
         """
+        # Handle max_tokens deprecation
+        if max_tokens is not None and max_new_tokens is None:
+            max_new_tokens = max_tokens
+        
+        # Determine input tokens
+        if prompt is not None:
+            # Truncate conversation if needed (before adding user message to history)
+            self._truncate_conversation(
+                self.max_context_length - (max_new_tokens or 100),
+                new_user_message=prompt
+            )
+            
+            # Format conversation with user message (not yet in history)
+            formatted_prompt = self._format_conversation(include_user_message=prompt)
+            input_tokens = self.tokenizer.encode(formatted_prompt)
+            
+            # Now add user message to history
+            self.conversation_history.append({"role": "user", "content": prompt})
+        elif tokens is not None:
+            input_tokens = tokens
+        else:
+            raise ValueError("Either 'prompt' or 'tokens' must be provided")
+        
         if stop_tokens is None:
             stop_tokens = []
         
         # Set max_new_tokens (use a large value, we'll stop early if needed)
-        max_new_tokens = max_tokens if max_tokens is not None else 1000
+        max_new_tokens = max_new_tokens if max_new_tokens is not None else 1000
         
         # Prepare RNG key for temperature sampling
         rng_key = self.rng_key if temperature > 0.0 else None
         
-        # Use a callback to yield tokens incrementally
-        generated_count = [0]  # Use list to allow modification in nested function
-        should_stop = [False]  # Flag to stop generation
+        # Collect generated tokens for text-based generation
+        generated_tokens_list = []
         
         def token_callback(token: int):
             """Callback called for each generated token."""
-            # Check stop tokens
-            if token in stop_tokens:
-                should_stop[0] = True
-                return
-            
-            # Check max_tokens
-            if max_tokens is not None and generated_count[0] >= max_tokens:
-                should_stop[0] = True
-                return
-            
-            generated_count[0] += 1
+            generated_tokens_list.append(token)
         
-        # Generate tokens using inference.generate() with callback
-        # We'll need to modify this to support early stopping
-        # For now, generate all tokens and filter afterwards
+        # Generate tokens using inference.generate()
         try:
             generated_tokens = generate(
                 model=self.model,
                 params=self.params,
-                prompt_tokens=tokens,
+                prompt_tokens=input_tokens,
                 max_new_tokens=max_new_tokens,
                 temperature=temperature,
                 rng_key=rng_key,
@@ -221,18 +304,43 @@ class TokenGenerator:
             pass
         
         # Extract only the newly generated tokens (after prompt)
-        new_tokens = generated_tokens[len(tokens):]
+        new_tokens = generated_tokens[len(input_tokens):]
         
-        # Yield tokens one by one, checking stop conditions
-        for i, token in enumerate(new_tokens):
-            # Check stop tokens
+        # Handle stop tokens
+        filtered_tokens = []
+        for token in new_tokens:
             if token in stop_tokens:
                 break
+            filtered_tokens.append(token)
+        
+        # Limit by max_new_tokens
+        if max_new_tokens is not None:
+            filtered_tokens = filtered_tokens[:max_new_tokens]
+        
+        # If prompt was provided, return text
+        if prompt is not None:
+            # Decode generated tokens
+            generated_text = self.tokenizer.decode(filtered_tokens)
             
-            # Check max_tokens
-            if max_tokens is not None and i >= max_tokens:
-                break
+            # Add assistant response to conversation history
+            self.conversation_history.append({"role": "assistant", "content": generated_text})
             
-            # For now, logprob is 0.0 (we'd need to modify generate() to return logprobs)
-            logprob = 0.0
-            yield (token, logprob)
+            if stream:
+                # Stream character-by-character
+                def stream_generator():
+                    for char in generated_text:
+                        yield char
+                return stream_generator()
+            else:
+                return generated_text
+        else:
+            # Token-based generation: yield (token, logprob) tuples
+            def token_generator():
+                for token in filtered_tokens:
+                    logprob = 0.0  # We'd need to modify generate() to return logprobs
+                    yield (token, logprob)
+            return token_generator()
+    
+    def reset_conversation(self):
+        """Reset conversation history."""
+        self.conversation_history = []

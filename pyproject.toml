@@ -1,0 +1,74 @@
+[project]
+name = "gpt-oss"
+version = "0.0.8"
+description = "JAX backend for GPT-OSS models"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {file = "LICENSE"}
+authors = [
+    {name = "GPT-OSS Contributors"},
+]
+
+dependencies = [
+    "openai-harmony",
+    "tiktoken>=0.9.0",
+]
+
+[project.optional-dependencies]
+jax = [
+    "jax[cpu]>=0.4.20",
+    "jaxlib>=0.4.20",
+    "flax>=0.8.0",
+    "orbax-checkpoint>=0.5.0",
+    "safetensors>=0.5.3",
+    "numpy",
+    "tqdm",
+]
+
+notebook = [
+    "jupyter>=1.0.0",
+    "ipywidgets>=8.0.0",
+]
+
+test = [
+    "pytest>=7.4.0",
+    "pytest-xdist>=3.3.1",
+]
+
+dev = [
+    "gpt-oss[jax,notebook,test]",
+]
+
+[project.urls]
+Homepage = "https://github.com/atsentia/jax-for-gpt-oss"
+Documentation = "https://github.com/atsentia/jax-for-gpt-oss#readme"
+Repository = "https://github.com/atsentia/jax-for-gpt-oss"
+Issues = "https://github.com/atsentia/jax-for-gpt-oss/issues"
+
+[project.scripts]
+gpt-oss-generate = "gpt_oss.generate:main"
+gpt-oss-chat = "gpt_oss.chat:main"
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gpt_oss*"]
+exclude = ["tests*", "examples*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "requires_checkpoint: marks tests that need checkpoint files",
+]

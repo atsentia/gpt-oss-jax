@@ -1,0 +1,71 @@
+bin/run_harmony_example.sh
+============================================================
+Harmony Format Example - GPT-OSS-20B with JAX
+============================================================
+
+Checkpoint: weights/gpt-oss-20b
+Prompt: What is the capital of France?
+Max tokens: 50
+Temperature: 0.0
+
+Loading checkpoint and initializing model...
+
+[TokenGenerator] Detected checkpoint format: orbax
+[TokenGenerator] Model config: 24 layers, 2880 hidden size
+[TokenGenerator] Loading weights...
+Loading checkpoint: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 100/100% [00:14]
+  ✓ Loaded 27 top-level parameter groups
+  ✓ Total parameters: 20,914,757,184 (20.91B)
+[TokenGenerator] Initializing model...
+[TokenGenerator] Ready for generation
+============================================================
+Harmony Format Example
+============================================================
+User message: 'What is the capital of France?'
+
+✓ Using openai-harmony API for Harmony formatting
+Prompt tokens (13): [200006, 1428, 200008, 4827, 382, 290, 9029, 328, 10128, 30, 200007, 200006, 173781]...
+Special tokens used: [200006, 200008, 200007, 200006]
+Stop tokens: [200002, 200012]... (will stop generation at Harmony boundaries)
+
+Generating response...
+
+
+[Token 0] Detailed timing, cache_offset=13:
+  Input shape: (13,)
+  Array creation: 4.67ms
+  Forward pass: 18.61s
+  Total token time: 18.61s
+
+[Token 1] Detailed timing, cache_offset=14:
+  Input shape: (1,)
+  Array creation: 3.77ms
+  Forward pass: 2.50s
+  Total token time: 2.50s
+
+[Token 2] Detailed timing, cache_offset=15:
+  Input shape: (1,)
+  Array creation: 0.05ms
+  Forward pass: 1.33s
+  Total token time: 1.33s
+
+
+============================================================
+Generated Response:
+============================================================
+<|start|>user<|message|>What is the capital of France?<|end|><|start|>assistant<|channel|>analysis<|message|>We need to answer the question: "What is the capital of France?" The answer: Paris.<|end|><|start|>assistant<|channel|>final<|message|>The capital of France is **Paris**.
+============================================================
+
+============================================================
+Parsed Harmony Output:
+============================================================
+
+💬 Final Answer:
+------------------------------------------------------------
+[TextContent(text='We need to answer the question: "What is the capital of France?" The answer: Paris.')]
+[TextContent(text='The capital of France is **Paris**.')]
+============================================================
+
+Time: 98.35s | Speed: 0.51 tok/s
+
+Done!

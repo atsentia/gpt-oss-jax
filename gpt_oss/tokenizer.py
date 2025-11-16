@@ -1,6 +1,23 @@
 import tiktoken
 
 def get_tokenizer():
+    """Get the o200k_harmony tokenizer used by gpt-oss-20b.
+    
+    Tries to use openai-harmony package if available, otherwise falls back
+    to manual construction using tiktoken.
+    """
+    # Try to use openai-harmony package if available
+    try:
+        from openai_harmony import load_harmony_encoding, HarmonyEncodingName
+        # Use the correct Harmony encoding for GPT-OSS
+        return load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
+    except ImportError:
+        pass
+    except AttributeError:
+        # Fallback if HarmonyEncodingName doesn't have HARMONY_GPT_OSS
+        pass
+    
+    # Fallback: manually construct Harmony tokenizer
     o200k_base = tiktoken.get_encoding("o200k_base")
     tokenizer = tiktoken.Encoding(
         name="o200k_harmony",
