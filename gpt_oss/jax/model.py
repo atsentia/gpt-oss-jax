@@ -602,11 +602,11 @@ class AttentionBlock(nn.Module):
 
         # Sink tokens (1 per attention head, as in PyTorch)
         # With GQA: num_attention_heads sink values get reshaped to [n_heads, q_mult]
+        # Note: dtype removed to use checkpoint's dtype (BF16 or float32 from upcast FP8)
         sinks = self.param(
             'sinks',
             nn.initializers.normal(stddev=0.02),
-            (num_attention_heads,),
-            jnp.bfloat16
+            (num_attention_heads,)
         )
 
         # Pre-normalization
@@ -614,11 +614,11 @@ class AttentionBlock(nn.Module):
         t = norm(x)
 
         # QKV projection
+        # Note: dtype removed to use checkpoint's dtype (BF16 or float32 from upcast FP8)
         qkv_dim = head_dim * (num_attention_heads + 2 * num_key_value_heads)
         qkv_proj = nn.Dense(
             features=qkv_dim,
             use_bias=True,
-            dtype=jnp.bfloat16,
             kernel_init=nn.initializers.normal(stddev=0.02),
             bias_init=nn.initializers.zeros,
             name='qkv'
@@ -718,10 +718,10 @@ class AttentionBlock(nn.Module):
             attn_out = sdpa(q, k, v, sinks, sm_scale, sliding_window, kv_offset, optimize_gqa=self.optimize_gqa)
 
         # Output projection
+        # Note: dtype removed to use checkpoint's dtype (BF16 or float32 from upcast FP8)
         out_proj = nn.Dense(
             features=self.config.hidden_size,
             use_bias=True,
-            dtype=jnp.bfloat16,
             kernel_init=nn.initializers.normal(stddev=0.02),
             bias_init=nn.initializers.zeros,
             name='out'
@@ -789,10 +789,10 @@ class MLPBlock(nn.Module):
         t = norm(x)
 
         # Gating network: select top-k experts per token
+        # Note: dtype removed to use checkpoint's dtype (BF16 or float32 from upcast FP8)
         gate = nn.Dense(
             features=num_experts,
             use_bias=True,
-            dtype=jnp.bfloat16,
             kernel_init=nn.initializers.normal(stddev=0.02),
             bias_init=nn.initializers.zeros,
             name='gate'
@@ -813,36 +813,34 @@ class MLPBlock(nn.Module):
         # Expert MLP weights (shared between baseline and optimized paths)
         # mlp1: hidden -> intermediate*2 (for SwiGLU gate/linear split)
         # mlp2: intermediate -> hidden
+        # Note: dtype removed to use checkpoint's dtype (BF16 or float32 from upcast FP8)
         mlp1_weight = self.param(
             'mlp1_weight',
             nn.initializers.normal(stddev=0.02),
-            (num_experts, intermediate_size * 2, hidden_size),
-            jnp.bfloat16
+            (num_experts, intermediate_size * 2, hidden_size)
         )
         mlp1_bias = self.param(
             'mlp1_bias',
             nn.initializers.zeros,
-            (num_experts, intermediate_size * 2),
-            jnp.bfloat16
+            (num_experts, intermediate_size * 2)
         )
         mlp2_weight = self.param(
             'mlp2_weight',
             nn.initializers.normal(stddev=0.02),
-            (num_experts, hidden_size, intermediate_size),
-            jnp.bfloat16
+            (num_experts, hidden_size, intermediate_size)
         )
         mlp2_bias = self.param(
             'mlp2_bias',
             nn.initializers.zeros,
-            (num_experts, hidden_size),
-            jnp.bfloat16
+            (num_experts, hidden_size)
         )
 
         # Compute expert outputs: Baseline vs Optimized path
         if self.optimize_moe:
             # OPTIMIZED: Token grouping by expert (better cache locality)
             # Build dense assignment matrix: [num_experts, n_tokens]
-            assignment_matrix = jnp.zeros((num_experts, n_tokens), dtype=jnp.bfloat16)
+            # Note: Use input tensor's dtype instead of hardcoded BF16
+            assignment_matrix = jnp.zeros((num_experts, n_tokens), dtype=t.dtype)
 
             # Assert inputs are valid
             assert expert_indices.shape == (n_tokens, experts_per_token), (
@@ -1055,10 +1053,10 @@ class Transformer(nn.Module):
         n_tokens = x.shape[0]
 
         # Embedding
+        # Note: dtype removed to use checkpoint's dtype (BF16 or float32 from upcast FP8)
         embedding = nn.Embed(
             num_embeddings=self.config.vocab_size,
             features=self.config.hidden_size,
-            dtype=jnp.bfloat16,
             name='embedding'
         )
         h = embedding(x)  # [n_tokens, hidden_size]
@@ -1088,10 +1086,10 @@ class Transformer(nn.Module):
         h = norm(h)
 
         # Unembedding (no bias)
+        # Note: dtype removed to use checkpoint's dtype (BF16 or float32 from upcast FP8)
         unembedding = nn.Dense(
             features=self.config.vocab_size,
             use_bias=False,
-            dtype=jnp.bfloat16,
             kernel_init=nn.initializers.normal(stddev=0.02),
             name='unembedding'
         )
