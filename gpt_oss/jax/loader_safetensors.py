@@ -34,9 +34,10 @@ except ImportError:
 def decompress_mxfp4(
     blocks: np.ndarray,
     scales: np.ndarray,
-    target_shape: tuple
+    target_shape: tuple,
+    target_dtype: Optional[jnp.dtype] = None
 ) -> jnp.ndarray:
-    """Decompress MXFP4 quantized tensor to BF16.
+    """Decompress MXFP4 quantized tensor to target dtype (default: BF16).
 
     MXFP4 uses 4-bit floating point with block-based exponent scaling:
     1. Each uint8 byte contains 2 FP4 values (4 bits each)
@@ -111,9 +112,11 @@ def decompress_mxfp4(
     # Flatten groups dimension: [num_experts, out_dim, groups, 32] → [num_experts, out_dim, groups*32]
     output = output.reshape(num_experts, out_dim, groups * block_size * 2)
 
-    # Convert to BF16 (stay in NumPy, convert to JAX later for efficiency)
-    output_bf16 = output.astype(np.float32)  # BF16 not natively supported in NumPy
-    return jnp.array(output_bf16, dtype=jnp.bfloat16)
+    # Convert to target dtype (default: BF16)
+    if target_dtype is None:
+        target_dtype = jnp.bfloat16
+
+    return jnp.array(output, dtype=target_dtype)
 
 
 def decompress_mxfp4_2d(
@@ -162,7 +165,11 @@ def decompress_mxfp4_2d(
     exponents = exponents[:, np.newaxis]
     output = np.ldexp(mantissas, exponents)
 
-    return jnp.array(output, dtype=jnp.bfloat16)
+    # Convert to target dtype (default: BF16)
+    if target_dtype is None:
+        target_dtype = jnp.bfloat16
+
+    return jnp.array(output, dtype=target_dtype)
 
 
 def create_param_name_mapping(num_layers: int = 24) -> Dict[str, Any]:
@@ -309,16 +316,18 @@ class WeightLoader:
     def _get_mxfp4_tensor_3d(
         self,
         blocks_name: str,
-        scales_name: str
+        scales_name: str,
+        target_dtype: Optional[jnp.dtype] = None
     ) -> jnp.ndarray:
         """Load and decompress MXFP4 3D tensor (for MoE expert weights).
 
         Args:
             blocks_name: Name of blocks tensor (uint8)
             scales_name: Name of scales tensor (uint8)
+            target_dtype: Target dtype for decompressed tensor (default: BF16)
 
         Returns:
-            Decompressed BF16 tensor [num_experts, out_dim, in_dim]
+            Decompressed tensor [num_experts, out_dim, in_dim] in target_dtype
         """
         blocks = self._get_tensor(blocks_name)
         scales = self._get_tensor(scales_name)
@@ -332,7 +341,7 @@ class WeightLoader:
         in_dim = groups * block_size * 2  # Each uint8 packs 2 FP4 values
         target_shape = (num_experts, out_dim, in_dim)
 
-        return decompress_mxfp4(blocks, scales, target_shape)
+        return decompress_mxfp4(blocks, scales, target_shape, target_dtype)
 
     def load_params(
         self,
@@ -411,10 +420,8 @@ class WeightLoader:
                     time_io += time.time() - t_io_start
 
                     t_decompress_start = time.time()
-                    mxfp4_tensor = self._get_mxfp4_tensor_3d(blocks_name, scales_name)
-                    # MXFP4 decompresses to BF16, convert to target dtype if needed
-                    if target_dtype != jnp.bfloat16:
-                        mxfp4_tensor = mxfp4_tensor.astype(target_dtype)
+                    # Decompress MXFP4 directly to target dtype (avoids intermediate BF16)
+                    mxfp4_tensor = self._get_mxfp4_tensor_3d(blocks_name, scales_name, target_dtype)
                     flat_params[flax_path] = mxfp4_tensor
                     time_decompress += time.time() - t_decompress_start
 
