@@ -33,11 +33,11 @@ class ModelConfig:
         optimize_moe: Whether to use token grouping for MoE (better cache locality)
     """
     num_hidden_layers: int = 24
-    num_experts: int = 128
-    experts_per_token: int = 4
+    num_experts: int = 32  # gpt-oss-20b has 32 experts (120b has 128)
+    experts_per_token: int = 4  # gpt-oss-20b uses 4 experts per token
     vocab_size: int = 201088
     hidden_size: int = 2880
-    intermediate_size: int = 2880
+    intermediate_size: int = 2880  # Base MLP size (SwiGLU doubles this internally to 5760)
     swiglu_limit: float = 7.0
     head_dim: int = 64
     num_attention_heads: int = 64
