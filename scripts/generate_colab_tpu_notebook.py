@@ -323,7 +323,7 @@ def create_notebook():
         "# Save to Orbax format (still on CPU)\n",
         "print(\"Saving to Orbax...\")\n",
         "checkpointer = ocp.PyTreeCheckpointer()\n",
-        "checkpointer.save(orbax_path, params, save_args=ocp.SaveArgs(aggregate=True))\n",
+        "checkpointer.save(orbax_path, params)\n",
         "ram_peak = get_ram_gb()\n",
         "\n",
         "print(f\"✓ Converted in {time.time()-t0:.1f}s\")\n",
