@@ -60,7 +60,7 @@ def main():
     if args.output:
         orbax_path = str(Path(args.output).resolve())
     else:
-        orbax_path = str(Path.cwd() / "gpt-oss-20b-orbax-fp8")
+        orbax_path = str((Path.cwd() / "gpt-oss-20b-orbax-fp8").resolve())
 
     print("=" * 70)
     print("FP8 CONVERSION TEST - MAC M3 ULTRA")
