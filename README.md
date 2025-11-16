@@ -1,88 +1,72 @@
-# JAX for GPT-OSS
+# 🚀 JAX for GPT-OSS
 
-JAX backend for GPT-OSS models with Harmony protocol support, optimized for CPU/TPU inference.
+JAX implementation of GPT-OSS-20B with Harmony protocol support for multi-channel reasoning.
+
+## What is this?
+
+This repository provides a JAX-based inference implementation for the GPT-OSS-20B language model (21B parameters). It demonstrates the **Harmony protocol**, which enables models to output structured multi-channel reasoning (separate analysis and final answer channels).
+
+**Key Features:**
+- ✅ Basic JAX inference for GPT-OSS-20B
+- ✅ Harmony protocol multi-channel reasoning
+- ✅ CPU and TPU backend support
+- ✅ Interactive Jupyter notebooks
+
+**Note:** This is an educational/reference implementation. For production use cases, consider optimized serving frameworks.
+
+## Why JAX + GPT-OSS?
+
+### Why GPT-OSS?
+OpenAI's GPT-OSS models (20B and 120B parameters) are **high-quality open-weight LLMs**:
+- 🏆 **Strong Performance**: Capable general-purpose language models suitable for research and applications
+- 🔓 **Truly Open**: Full model weights, training code, and evaluation harnesses released
+- 🎯 **Harmony Protocol**: Native support for multi-channel structured reasoning
+
+### Why JAX?
+JAX is the framework of choice for leading AI labs and production systems:
+- 🏢 **Industry Adoption**: Powers Google Gemini, X (Grok), Anthropic (Claude training), Cohere
+- 🔬 **Research Standard**: Preferred by DeepMind, Google Research, OpenAI (research), Allen AI
+- 📊 **Ecosystem**: 1000+ JAX models on HuggingFace, extensive scientific computing libraries
+- ⚡ **Performance**: XLA compilation, automatic differentiation, TPU/GPU acceleration out-of-the-box
+- 🧮 **Functional Design**: Clean, composable code that scales from research prototypes to production
+
+**Bottom line**: Learning JAX + GPT-OSS gives you hands-on experience with the same tools and models used by top-tier AI labs.
 
 ## Quick Start
 
+### Local Jupyter Notebook (CPU)
+
 ```bash
-# Install dependencies
-uv venv
-uv pip install -e ".[jax,notebook]"
+# Clone and install
+git clone https://github.com/atsentia/gpt-oss-jax.git
+cd gpt-oss-jax
+uv venv && uv pip install -e ".[jax,notebook]"
 
-# Setup checkpoint (symlink recommended)
-ln -s /path/to/checkpoint weights/gpt-oss-20b
-
-# Launch interactive notebook
-source .venv/bin/activate
-python -m ipykernel install --user --name=jax-for-gpt-oss
+# Run notebook
 jupyter lab examples/jax_inference.ipynb
 ```
 
-See [INSTALL.md](INSTALL.md) for detailed installation instructions.
+### Google Colab (TPU)
 
-## Features
+Run on Google Cloud TPU with one click:
 
-- **Fast Loading** - Orbax checkpoints load in ~5s (vs ~90s for SafeTensors)
-- **Harmony Protocol** - Multi-channel reasoning with color-coded output (analysis + final answer)
-- **KV Caching** - Efficient autoregressive generation
-- **XLA Compilation** - Automatic optimization and kernel fusion
-- **Interactive Notebook** - Progress bars, statistics, and visualization
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/atsentia/gpt-oss-jax/blob/main/examples/jax_inference_colab_tpu.ipynb)
 
-## Harmony Protocol Demo
-
-The [Jupyter notebook](examples/jax_inference.ipynb) includes a complete Harmony protocol demonstration with color-coded output:
-
-- **Blue box** - Original user message
-- **Green box** - Harmony-formatted prompt with special tokens
-- **Yellow box** - Raw generated response
-- **Green box** - Reasoning/Analysis (analysis channel)
-- **Purple box** - Final Answer (final channel)
-
-## Basic Usage
-
-```python
-from gpt_oss.jax import TokenGenerator
-
-# Initialize generator (auto-detects Orbax or SafeTensors)
-generator = TokenGenerator("weights/gpt-oss-20b", max_context_length=4096)
-
-# Generate text
-response = generator.generate(
-    prompt="What is the capital of France?",
-    temperature=0.0,
-    max_new_tokens=50
-)
-print(response)
-```
+The TPU notebook demonstrates adaptive precision strategies:
+- **TPU v2-8**: BF16 (16-bit) - ~42GB memory
+- **TPU v6e**: FP8 (8-bit) - ~21GB memory
 
 ## Examples
 
-- **[Interactive Notebook](examples/jax_inference.ipynb)** - Full tutorial with Harmony demo
-- **[Shell Script](bin/run_harmony_example.sh)** - CLI example with colored terminal output
+- **[Local Notebook](examples/jax_inference.ipynb)** - CPU inference with Harmony demo
+- **[Colab TPU Notebook](examples/jax_inference_colab_tpu.ipynb)** - Cloud TPU with adaptive precision
 
-## Performance
+## Resources
 
-| Platform | Loading | Tokens/s | Use Case |
-|----------|---------|----------|----------|
-| CPU (M3 Max) | ~5s | 0.5-1.0 | Development |
-| TPU v4-8 | ~5s | 200-500 | Production |
-| TPU v5e-8 | ~5s | 300-700 | Cost-effective |
-
-## Requirements
-
-- Python >= 3.12
-- JAX >= 0.4.20
-- openai-harmony (for Harmony protocol)
-
-See [INSTALL.md](INSTALL.md) for complete dependency list.
+- **Model**: [GPT-OSS-20B on HuggingFace](https://huggingface.co/openai/gpt-oss-20b)
+- **Harmony Protocol**: [OpenAI Harmony](https://github.com/openai/harmony)
+- **JAX Framework**: [JAX Documentation](https://jax.readthedocs.io/)
 
 ## License
 
 Apache 2.0 - see [LICENSE](LICENSE)
-
-## Resources
-
-- **Repository**: [github.com/atsentia/gpt-oss-jax](https://github.com/atsentia/gpt-oss-jax)
-- [JAX Documentation](https://jax.readthedocs.io/)
-- [GPT-OSS-20B Model Card](https://huggingface.co/atsentia/gpt-oss-20b)
-- [Harmony Protocol](https://github.com/openai/harmony)
