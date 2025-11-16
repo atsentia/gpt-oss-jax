@@ -82,6 +82,7 @@ Apache 2.0 - see [LICENSE](LICENSE)
 
 ## Resources
 
+- **Repository**: [github.com/atsentia/gpt-oss-jax](https://github.com/atsentia/gpt-oss-jax)
 - [JAX Documentation](https://jax.readthedocs.io/)
 - [GPT-OSS-20B Model Card](https://huggingface.co/atsentia/gpt-oss-20b)
 - [Harmony Protocol](https://github.com/openai/harmony)

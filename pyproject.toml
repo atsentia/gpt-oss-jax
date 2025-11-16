@@ -1,12 +1,23 @@
 [project]
-name = "gpt-oss"
-version = "0.0.8"
-description = "JAX backend for GPT-OSS models"
+name = "gpt-oss-jax"
+version = "0.1.0"
+description = "JAX backend for GPT-OSS models with Harmony protocol support"
 readme = "README.md"
 requires-python = ">=3.12"
-license = {file = "LICENSE"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
-    {name = "GPT-OSS Contributors"},
+    {name = "Atsentia", email = "info@atsentia.com"},
+]
+keywords = ["jax", "gpt", "harmony", "transformer", "language-model", "tpu", "inference"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 dependencies = [
@@ -36,14 +47,14 @@ test = [
 ]
 
 dev = [
-    "gpt-oss[jax,notebook,test]",
+    "gpt-oss-jax[jax,notebook,test]",
 ]
 
 [project.urls]
-Homepage = "https://github.com/atsentia/jax-for-gpt-oss"
-Documentation = "https://github.com/atsentia/jax-for-gpt-oss#readme"
-Repository = "https://github.com/atsentia/jax-for-gpt-oss"
-Issues = "https://github.com/atsentia/jax-for-gpt-oss/issues"
+Homepage = "https://github.com/atsentia/gpt-oss-jax"
+Documentation = "https://github.com/atsentia/gpt-oss-jax#readme"
+Repository = "https://github.com/atsentia/gpt-oss-jax"
+Issues = "https://github.com/atsentia/gpt-oss-jax/issues"
 
 [project.scripts]
 gpt-oss-generate = "gpt_oss.generate:main"

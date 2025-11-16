@@ -23,8 +23,8 @@ Then install the package:
 
 ```bash
 # Clone the repository (if not already done)
-git clone https://github.com/atsentia/jax-for-gpt-oss.git
-cd jax-for-gpt-oss
+git clone https://github.com/atsentia/gpt-oss-jax.git
+cd gpt-oss-jax
 
 # Create virtual environment
 uv venv
@@ -302,6 +302,6 @@ After installation:
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/atsentia/jax-for-gpt-oss/issues)
+- **Issues**: [GitHub Issues](https://github.com/atsentia/gpt-oss-jax/issues)
 - **Documentation**: See [README.md](README.md) for usage examples
 - **JAX Docs**: [jax.readthedocs.io](https://jax.readthedocs.io/)

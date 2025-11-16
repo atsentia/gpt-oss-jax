@@ -21,14 +21,14 @@ from tqdm import tqdm
 # Handle both module import and direct execution
 try:
     from .config import ModelConfig
+    from .quantization import decompress_mxfp4_to_dtype
+    from .quantization.mxfp4 import FP4_VALUES
+    from .quantization.dtypes import TargetDtype
 except ImportError:
     from config import ModelConfig
-
-# FP4 lookup table (16 values: 8 positive, 8 negative)
-FP4_VALUES = np.array([
-    +0.0, +0.5, +1.0, +1.5, +2.0, +3.0, +4.0, +6.0,
-    -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0
-], dtype=np.float32)
+    from quantization import decompress_mxfp4_to_dtype
+    from quantization.mxfp4 import FP4_VALUES
+    from quantization.dtypes import TargetDtype
 
 
 def decompress_mxfp4(

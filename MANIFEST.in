@@ -1,0 +1,23 @@
+# Include documentation
+include README.md
+include INSTALL.md
+include LICENSE
+
+# Include example files
+recursive-include examples *.ipynb *.py *.md
+
+# Include scripts
+recursive-include bin *.sh *.py
+
+# Include test data (but not the test code itself - that's in the repo only)
+# recursive-include tests/data *
+
+# Exclude compiled files and caches
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude .DS_Store
+
+# Exclude weight files and checkpoints
+exclude weights/*
+exclude *.safetensors

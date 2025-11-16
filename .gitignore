@@ -212,3 +212,4 @@ __marimo__/
 weights/*
 !weights/.gitkeep
 !weights/README.md
+.DS_Store
