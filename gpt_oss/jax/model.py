@@ -808,12 +808,6 @@ class MLPBlock(nn.Module):
         expert_logits, expert_indices = jax.lax.top_k(g, experts_per_token)
         expert_weights = jax.nn.softmax(expert_logits, axis=-1)  # [n_tokens, experts_per_token]
 
-        # DEBUG: Check for NaNs in expert routing
-        if jnp.any(jnp.isnan(g)):
-            raise ValueError(f"MLPBlock DEBUG: NaN in gate logits! g dtype={g.dtype}, t dtype={t.dtype}")
-        if jnp.any(jnp.isnan(expert_weights)):
-            raise ValueError(f"MLPBlock DEBUG: NaN in expert_weights after softmax! expert_logits={expert_logits}")
-
         # Validate expert routing
         assert expert_indices.shape == (n_tokens, experts_per_token), \
             f"MLPBlock: Expert indices shape mismatch, expected ({n_tokens}, {experts_per_token}), got {expert_indices.shape}"
@@ -922,13 +916,7 @@ class MLPBlock(nn.Module):
 
             # Apply MLP1: batched matmul for each token-expert pair
             mlp1_out = jnp.einsum('beck,bek->bec', selected_mlp1_weight, t_expanded) + selected_mlp1_bias
-            # DEBUG: Check after MLP1
-            if jnp.any(jnp.isnan(mlp1_out)):
-                raise ValueError(f"MLPBlock DEBUG: NaN after MLP1! mlp1_weight dtype={selected_mlp1_weight.dtype}, t dtype={t_expanded.dtype}")
             mlp1_out = swiglu(mlp1_out, limit=self.config.swiglu_limit)
-            # DEBUG: Check after SwiGLU
-            if jnp.any(jnp.isnan(mlp1_out)):
-                raise ValueError(f"MLPBlock DEBUG: NaN after SwiGLU!")
 
             # Gather MLP2 weights and biases
             selected_mlp2_weight = mlp2_weight[expert_indices]
