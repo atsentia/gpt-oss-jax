@@ -1,12 +1,55 @@
-{
-  "cells": [
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+#!/usr/bin/env python3
+"""Generate Colab TPU notebook with proper cell structure."""
+
+import json
+from pathlib import Path
+
+def create_notebook():
+    """Create complete Colab TPU notebook."""
+
+    notebook = {
+        "cells": [],
+        "metadata": {
+            "accelerator": "TPU",
+            "colab": {
+                "provenance": [],
+                "toc_visible": True
+            },
+            "kernelspec": {
+                "display_name": "Python 3",
+                "name": "python3"
+            },
+            "language_info": {
+                "name": "python"
+            }
+        },
+        "nbformat": 4,
+        "nbformat_minor": 0
+    }
+
+    def md(*lines):
+        """Add markdown cell."""
+        notebook["cells"].append({
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": list(lines)
+        })
+
+    def code(*lines):
+        """Add code cell."""
+        notebook["cells"].append({
+            "cell_type": "code",
+            "execution_count": None,
+            "metadata": {},
+            "outputs": [],
+            "source": list(lines)
+        })
+
+    # Cell 0: Title and Introduction
+    md(
         "# JAX: GPT-OSS-20B on Google Colab TPU\n",
         "\n",
-        "<span style=\"color: #e67e22; font-weight: bold;\">\u26a0\ufe0f Note: This is a basic non-optimized implementation for educational purposes.</span>\n",
+        "<span style=\"color: #e67e22; font-weight: bold;\">⚠️ Note: This is a basic non-optimized implementation for educational purposes.</span>\n",
         "\n",
         "## Adaptive Precision Inference\n",
         "\n",
@@ -19,15 +62,13 @@
         "| **v2-8** | 64GB (8x8GB) | BF16 (16-bit) | ~42GB |\n",
         "| **v6e** | 32GB | FP8 (8-bit) | ~21GB |\n",
         "\n",
-        "### \u26a0\ufe0f Setup Required\n",
+        "### ⚠️ Setup Required\n",
         "\n",
-        "**Runtime \u2192 Change runtime type \u2192 TPU** (before running cells)"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+        "**Runtime → Change runtime type → TPU** (before running cells)"
+    )
+
+    # Cell 1: Install Dependencies Header
+    md(
         "## 1. Install Dependencies\n",
         "\n",
         "This cell installs all required packages:\n",
@@ -37,14 +78,10 @@
         "- gpt-oss-jax - Our GPT-OSS-20B implementation\n",
         "\n",
         "Expected time: ~2-3 minutes"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 2: Install Dependencies Code
+    code(
         "# Install dependencies\n",
         "!pip install -q \"jax[tpu]>=0.4.20\" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html\n",
         "!pip install -q flax orbax-checkpoint safetensors openai-harmony tiktoken tqdm huggingface_hub\n",
@@ -54,31 +91,25 @@
         "%cd gpt-oss-jax\n",
         "!pip install -q -e \".[jax]\"\n",
         "\n",
-        "print(\"\u2713 Setup complete\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+        "print(\"✓ Setup complete\")"
+    )
+
+    # Cell 3: TPU Detection Header
+    md(
         "## 2. Verify TPU Backend & Select Precision Strategy\n",
         "\n",
         "This cell:\n",
         "1. Detects your TPU type (v2-8, v6e, etc.)\n",
         "2. Validates TPU is available (not CPU)\n",
         "3. Automatically selects precision strategy:\n",
-        "   - TPU v2-8 with 8 devices \u2192 BF16 (16-bit, 64GB HBM)\n",
-        "   - TPU v6e \u2192 FP8 (8-bit, 32GB HBM)\n",
+        "   - TPU v2-8 with 8 devices → BF16 (16-bit, 64GB HBM)\n",
+        "   - TPU v6e → FP8 (8-bit, 32GB HBM)\n",
         "\n",
         "What to expect: Should print your TPU type and selected strategy"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 4: TPU Detection Code
+    code(
         "import jax\n",
         "import jax.numpy as jnp\n",
         "\n",
@@ -88,7 +119,7 @@
         "\n",
         "tpu_type = devices[0].device_kind\n",
         "num_devices = len(devices)\n",
-        "print(f\"\u2713 {tpu_type} ({num_devices} devices)\")\n",
+        "print(f\"✓ {tpu_type} ({num_devices} devices)\")\n",
         "\n",
         "# Select precision\n",
         "if \"v2\" in tpu_type and num_devices == 8:\n",
@@ -99,12 +130,10 @@
         "    print(\"Strategy: FP8 (8-bit) - 32GB HBM\")\n",
         "else:\n",
         "    raise RuntimeError(f\"Unsupported: {tpu_type}\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 5: Download Header
+    md(
         "## 3. Download GPT-OSS-20B Weights from HuggingFace\n",
         "\n",
         "Downloads the official GPT-OSS-20B model checkpoint (13.8 GB) from HuggingFace.\n",
@@ -117,14 +146,10 @@
         "Expected time: ~3-5 minutes (depending on HuggingFace bandwidth)\n",
         "\n",
         "Note: If you hit rate limits, wait a few minutes and re-run this cell"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 6: Download Code
+    code(
         "from huggingface_hub import snapshot_download\n",
         "from pathlib import Path\n",
         "\n",
@@ -138,13 +163,11 @@
         ")\n",
         "\n",
         "safetensors_path = Path(\"/content/gpt-oss-20b-dl/original\")\n",
-        "print(f\"\u2713 Downloaded: {safetensors_path}\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+        "print(f\"✓ Downloaded: {safetensors_path}\")"
+    )
+
+    # Cell 7: Convert to Orbax Header
+    md(
         "## 4. Convert SafeTensors to Orbax Format\n",
         "\n",
         "Converts the HuggingFace checkpoint to Orbax format (JAX native).\n",
@@ -160,14 +183,10 @@
         "Note for TPU v6e (FP8): This cell loads as BF16 first (~42GB), then converts to FP8. This may cause OOM on 32GB HBM. If this happens, use a pre-converted FP8 Orbax checkpoint instead.\n",
         "\n",
         "Expected time: ~15-20 seconds"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 8: Convert to Orbax Code
+    code(
         "import time\n",
         "from gpt_oss.jax.config import ModelConfig\n",
         "from gpt_oss.jax.loader_safetensors import WeightLoader\n",
@@ -196,18 +215,16 @@
         "checkpointer = ocp.PyTreeCheckpointer()\n",
         "checkpointer.save(orbax_path, params, save_args=ocp.SaveArgs(aggregate=True))\n",
         "\n",
-        "print(f\"\u2713 Converted in {time.time()-t0:.1f}s\")\n",
+        "print(f\"✓ Converted in {time.time()-t0:.1f}s\")\n",
         "print(f\"  Orbax checkpoint: {orbax_path}\")\n",
         "\n",
         "# Clean up SafeTensors to save space\n",
         "!rm -rf /content/gpt-oss-20b-dl\n",
         "print(\"  Cleaned up SafeTensors (13.8 GB freed)\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 9: Load from Orbax Header
+    md(
         "## 5. Load Model Parameters from Orbax\n",
         "\n",
         "Loads the 21B parameters from Orbax checkpoint (JAX native format).\n",
@@ -221,14 +238,10 @@
         "- Minimal accuracy loss (<2% perplexity increase)\n",
         "\n",
         "Expected time: ~2-3 seconds (much faster than SafeTensors!)"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 10: Load from Orbax Code
+    code(
         "import time\n",
         "from orbax.checkpoint import PyTreeCheckpointer\n",
         "import orbax.checkpoint as ocp\n",
@@ -239,14 +252,12 @@
         "checkpointer = ocp.PyTreeCheckpointer()\n",
         "params = checkpointer.restore(orbax_path)\n",
         "\n",
-        "print(f\"\u2713 Loaded in {time.time()-t0:.1f}s\")\n",
+        "print(f\"✓ Loaded in {time.time()-t0:.1f}s\")\n",
         "print(f\"  Orbax is {15/(time.time()-t0):.1f}x faster than SafeTensors!\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 11: Initialize Model Header
+    md(
         "## 6. Initialize Model & Tokenizer\n",
         "\n",
         "Creates the GPT-OSS-20B Transformer model and tokenizer.\n",
@@ -261,14 +272,10 @@
         "- Layers: 40\n",
         "- Context: 8192 tokens\n",
         "- Vocab: 50,257 tokens"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 12: Initialize Model Code
+    code(
         "from gpt_oss.jax.model import Transformer\n",
         "from gpt_oss.tokenizer import get_tokenizer\n",
         "\n",
@@ -276,15 +283,13 @@
         "tokenizer = get_tokenizer()\n",
         "\n",
         "sample = jax.tree_util.tree_leaves(params)[0]\n",
-        "print(f\"\u2713 Model: GPT-OSS-20B\")\n",
+        "print(f\"✓ Model: GPT-OSS-20B\")\n",
         "print(f\"  Dtype: {sample.dtype}\")\n",
         "print(f\"  Strategy: {STRATEGY.upper()}\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 13: Memory Analysis Header
+    md(
         "## 7. Memory Utilization Analysis\n",
         "\n",
         "Calculates actual memory usage and compares to TPU HBM capacity.\n",
@@ -297,14 +302,10 @@
         "Target utilization: ~66% (leaves headroom for activations and KV cache)\n",
         "\n",
         "If you see >90% utilization: Model may not fit for inference"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 14: Memory Analysis Code
+    code(
         "def mem_gb(p):\n",
         "    return sum(x.nbytes for x in jax.tree_util.tree_leaves(p)) / 1e9\n",
         "\n",
@@ -313,12 +314,10 @@
         "\n",
         "tpu_hbm = 64 if \"v2\" in tpu_type and num_devices == 8 else 32\n",
         "print(f\"TPU HBM: {tpu_hbm} GB ({actual/tpu_hbm*100:.0f}% used)\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 15: Inference Header
+    md(
         "## 8. Run Inference with Harmony Protocol\n",
         "\n",
         "Demonstrates multi-channel reasoning using the Harmony protocol.\n",
@@ -331,19 +330,15 @@
         "Example Question: \"What is the capital of France?\"\n",
         "\n",
         "Expected output:\n",
-        "- Analysis channel: Model's reasoning process (\ud83d\udcca)\n",
-        "- Answer channel: Final response (\ud83d\udcac)\n",
+        "- Analysis channel: Model's reasoning process (📊)\n",
+        "- Answer channel: Final response (💬)\n",
         "- Performance: Tokens/second metric\n",
         "\n",
         "Try it: Edit the msg variable to ask your own questions!"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 16: Inference Code
+    code(
         "import re\n",
         "from IPython.display import HTML, display\n",
         "from gpt_oss.jax.inference import generate\n",
@@ -377,19 +372,17 @@
         "    final = re.search(r'<\\|channel\\|>(main|final)<\\|message\\|>(.*?)(?:<\\|end\\|>|<\\|channel\\|>|$)', generated, re.DOTALL)\n",
         "    \n",
         "    if analysis:\n",
-        "        print(f\"\ud83d\udcca Analysis: {analysis.group(1).strip()}\")\n",
+        "        print(f\"📊 Analysis: {analysis.group(1).strip()}\")\n",
         "    if final:\n",
-        "        print(f\"\ud83d\udcac Answer: {final.group(2).strip()}\")\n",
+        "        print(f\"💬 Answer: {final.group(2).strip()}\")\n",
         "    \n",
         "    print(f\"\\nPerf: {stats['tokens_per_second']:.2f} tok/s\")\n",
         "except Exception as e:\n",
         "    print(f\"Harmony demo error: {e}\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 17: Performance Comparison
+    md(
         "## Performance Comparison\n",
         "\n",
         "| Metric | TPU v2-8 (BF16) | TPU v6e (FP8) |\n",
@@ -402,12 +395,10 @@
         "| Tokens/sec | 50-100 | 80-150* |\n",
         "\n",
         "\\* FP8 may be faster due to lower memory bandwidth"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 18: Google Drive Header
+    md(
         "## 9. Optional: Save to Google Drive\n",
         "\n",
         "Uncomment the code below to save your Orbax checkpoint to Google Drive.\n",
@@ -418,25 +409,19 @@
         "- 2-3x faster loading from Drive than HuggingFace\n",
         "\n",
         "Note: Requires ~20-42 GB of Drive storage depending on precision strategy"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 19: Google Drive Code
+    code(
         "# Optional: Save to Google Drive\n",
         "# from google.colab import drive\n",
         "# drive.mount('/content/drive')\n",
         "# !cp -r {orbax_path} /content/drive/MyDrive/\n",
-        "# print(\"\u2713 Saved to Drive\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+        "# print(\"✓ Saved to Drive\")"
+    )
+
+    # Cell 20: TPU Monitoring Header
+    md(
         "## 10. TPU Memory Monitoring\n",
         "\n",
         "Real-time monitoring of TPU memory usage across all devices.\n",
@@ -451,14 +436,10 @@
         "- Debug OOM (Out of Memory) errors\n",
         "- Verify memory is balanced across devices\n",
         "- Monitor memory during inference"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 21: TPU Monitoring Code
+    code(
         "print(\"TPU Monitoring:\")\n",
         "try:\n",
         "    from jax.lib import xla_bridge\n",
@@ -474,12 +455,10 @@
         "            print(f\"  Device {i}: Memory info unavailable\")\n",
         "except Exception as e:\n",
         "    print(f\"  Monitoring unavailable: {e}\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 22: Cleanup Header
+    md(
         "## 11. Cleanup Temporary Files\n",
         "\n",
         "Removes the temporary download directory to free up disk space.\n",
@@ -493,39 +472,31 @@
         "- Orbax checkpoint (if you ran Cell 5)\n",
         "\n",
         "Safe to run: Parameters are already loaded in RAM"
-      ]
-    },
-    {
-      "cell_type": "code",
-      "execution_count": null,
-      "metadata": {},
-      "outputs": [],
-      "source": [
+    )
+
+    # Cell 23: Cleanup Code
+    code(
         "# Cleanup temp files\n",
         "!rm -rf /content/gpt-oss-20b-dl\n",
-        "print(\"\u2713 Cleaned temp files\")"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+        "print(\"✓ Cleaned temp files\")"
+    )
+
+    # Cell 24: Troubleshooting
+    md(
         "## Troubleshooting\n",
         "\n",
         "**OOM Errors**: Verify TPU type matches strategy (Cell 3)\n",
         "\n",
-        "**TPU Not Detected**: Runtime \u2192 Change runtime type \u2192 TPU, then restart\n",
+        "**TPU Not Detected**: Runtime → Change runtime type → TPU, then restart\n",
         "\n",
         "**Slow Download**: HuggingFace rate limits - wait and retry\n",
         "\n",
         "**Import Errors**: Re-run Cell 2 (environment setup)"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
-        "## \ud83d\ude80 Optimization Exercises\n",
+    )
+
+    # Cell 25: Optimization Exercises
+    md(
+        "## 🚀 Optimization Exercises\n",
         "\n",
         "### 1. JAX Code Optimization\n",
         "Profile with `jax.profiler`, optimize bottlenecks\n",
@@ -549,21 +520,19 @@
         "Batch multiple requests: 5-10x throughput\n",
         "\n",
         "**Discuss**: [GitHub Discussions](https://github.com/atsentia/gpt-oss-jax/discussions)"
-      ]
-    },
-    {
-      "cell_type": "markdown",
-      "metadata": {},
-      "source": [
+    )
+
+    # Cell 26: Conclusion
+    md(
         "## Conclusion\n",
         "\n",
-        "\u2705 Demonstrated adaptive precision (BF16 vs FP8)\n",
+        "✅ Demonstrated adaptive precision (BF16 vs FP8)\n",
         "\n",
-        "\u2705 2x memory reduction enables TPU v6e\n",
+        "✅ 2x memory reduction enables TPU v6e\n",
         "\n",
-        "\u2705 Production patterns: monitoring, error handling\n",
+        "✅ Production patterns: monitoring, error handling\n",
         "\n",
-        "\u2705 Harmony protocol multi-channel reasoning\n",
+        "✅ Harmony protocol multi-channel reasoning\n",
         "\n",
         "### Resources\n",
         "- [Repository](https://github.com/atsentia/gpt-oss-jax)\n",
@@ -571,23 +540,16 @@
         "- [JAX Docs](https://jax.readthedocs.io/)\n",
         "\n",
         "**Issues?** [Open an issue](https://github.com/atsentia/gpt-oss-jax/issues)"
-      ]
-    }
-  ],
-  "metadata": {
-    "accelerator": "TPU",
-    "colab": {
-      "provenance": [],
-      "toc_visible": true
-    },
-    "kernelspec": {
-      "display_name": "Python 3",
-      "name": "python3"
-    },
-    "language_info": {
-      "name": "python"
-    }
-  },
-  "nbformat": 4,
-  "nbformat_minor": 0
-}
+    )
+
+    # Save notebook
+    output_path = Path(__file__).parent.parent / "examples" / "jax_inference_colab_tpu.ipynb"
+    with open(output_path, 'w') as f:
+        json.dump(notebook, f, indent=2)
+
+    print(f"✓ Created notebook with {len(notebook['cells'])} cells")
+    print(f"  Saved to: {output_path}")
+    return output_path
+
+if __name__ == "__main__":
+    create_notebook()
