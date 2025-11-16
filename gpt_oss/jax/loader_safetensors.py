@@ -347,31 +347,41 @@ class WeightLoader:
         self,
         config: ModelConfig,
         show_progress: bool = True,
-        target_dtype: Optional[jnp.dtype] = None
+        target_dtype: Optional[jnp.dtype] = None,
+        mxfp4_target_dtype: Optional[jnp.dtype] = None
     ) -> Dict[str, Any]:
         """Load all model parameters from checkpoint.
 
         Args:
             config: Model configuration
             show_progress: Show progress bar during loading
-            target_dtype: Target dtype for loaded parameters (default: bfloat16)
-                         Use jnp.float8_e4m3fn for FP8 to reduce memory usage
+            target_dtype: Target dtype for BF16 parameters (default: bfloat16)
+                         Set to jnp.bfloat16 to keep BF16 params unchanged
+            mxfp4_target_dtype: Target dtype for MXFP4 decompression (default: same as target_dtype)
+                               Set to jnp.float8_e4m3fn for mixed-precision (BF16 + FP8)
 
         Returns:
             Flax parameter dictionary suitable for model.apply({'params': params}, ...)
 
         Example:
-            # Load as BF16 (default)
+            # Load all as BF16 (default, ~43GB)
             >>> params = loader.load_params(config)
 
-            # Load directly as FP8 (saves memory on TPU v6e)
+            # Load all as FP8 (aggressive, ~21GB but quality loss on BF16 params)
             >>> params = loader.load_params(config, target_dtype=jnp.float8_e4m3fn)
+
+            # Mixed precision: BF16 for small params, FP8 for MXFP4 experts (~33GB, best quality)
+            >>> params = loader.load_params(config, target_dtype=jnp.bfloat16, mxfp4_target_dtype=jnp.float8_e4m3fn)
         """
         import time
 
         # Default to bfloat16 if not specified
         if target_dtype is None:
             target_dtype = jnp.bfloat16
+
+        # Default MXFP4 dtype to same as target_dtype (for backward compatibility)
+        if mxfp4_target_dtype is None:
+            mxfp4_target_dtype = target_dtype
 
         # Create parameter name mapping
         param_mapping = create_param_name_mapping(num_layers=config.num_hidden_layers)
@@ -420,8 +430,8 @@ class WeightLoader:
                     time_io += time.time() - t_io_start
 
                     t_decompress_start = time.time()
-                    # Decompress MXFP4 directly to target dtype (avoids intermediate BF16)
-                    mxfp4_tensor = self._get_mxfp4_tensor_3d(blocks_name, scales_name, target_dtype)
+                    # Decompress MXFP4 to mxfp4_target_dtype (may differ from BF16 params)
+                    mxfp4_tensor = self._get_mxfp4_tensor_3d(blocks_name, scales_name, mxfp4_target_dtype)
                     flat_params[flax_path] = mxfp4_tensor
                     time_decompress += time.time() - t_decompress_start
 

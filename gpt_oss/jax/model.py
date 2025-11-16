@@ -8,6 +8,7 @@ Key design principles:
 - Shape transparency at every layer
 - Numerical compatibility with PyTorch reference (within BF16 tolerance)
 - CPU-only JAX execution (Metal not supported on Mac)
+- FP8 weight support: Automatically upcasts FP8 weights to float32 for computation
 """
 
 import math
@@ -18,6 +19,31 @@ import jax.numpy as jnp
 from flax import linen as nn
 
 from .config import ModelConfig
+
+
+def upcast_fp8_params(params):
+    """Upcast FP8 parameters to float32 for computation (preserves BF16).
+
+    JAX doesn't support FP8 operations yet, so we need to upcast FP8 weights
+    to float32 before use. This is applied automatically during inference.
+
+    Mixed-precision support:
+    - FP8 (float8_e4m3fn) → float32 (required for JAX operations)
+    - BF16 (bfloat16) → stays BF16 (no quality loss)
+    - Other dtypes → unchanged
+
+    Args:
+        params: Model parameters (PyTree)
+
+    Returns:
+        Parameters with FP8 tensors converted to float32, BF16 preserved
+    """
+    def upcast_if_fp8(x):
+        if isinstance(x, jax.Array) and x.dtype == jnp.float8_e4m3fn:
+            return x.astype(jnp.float32)
+        return x  # Preserve BF16, float32, etc.
+
+    return jax.tree_util.tree_map(upcast_if_fp8, params)
 
 # Import KVCache for type hints (will be imported at runtime when needed)
 try:

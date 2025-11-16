@@ -16,11 +16,11 @@ from tqdm import tqdm
 
 # Handle both module import and direct execution
 try:
-    from .model import Transformer
+    from .model import Transformer, upcast_fp8_params
     from .config import ModelConfig
     from .kv_cache import KVCache
 except ImportError:
-    from model import Transformer
+    from model import Transformer, upcast_fp8_params
     from config import ModelConfig
     from kv_cache import KVCache
 
@@ -173,6 +173,10 @@ def generate(
     if use_kv_cache:
         assert config is not None, \
             "generate: config required when use_kv_cache=True"
+
+    # Upcast FP8 parameters to float32 if needed
+    # JAX doesn't support FP8 operations yet, so we automatically convert
+    params = upcast_fp8_params(params)
 
     # Initialize with prompt
     current_tokens = list(prompt_tokens)
