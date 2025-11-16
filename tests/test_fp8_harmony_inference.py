@@ -188,9 +188,9 @@ def test_fp8_harmony_inference():
 
 
 def test_fp8_automatic_upcasting():
-    """Test that FP8→float32 upcasting happens automatically (preserves BF16)."""
+    """Test that FP8→BF16 upcasting happens automatically (safe upcast)."""
     print("\n" + "="*80)
-    print("TEST 3: Automatic FP8→float32 Upcasting (Mixed Precision)")
+    print("TEST 3: Automatic FP8→BF16 Upcasting (Mixed Precision)")
     print("="*80)
 
     checkpoint_path = Path("/Users/amund/jax-for-gpt-oss/gpt-oss-20b-orbax-mixed")
@@ -232,29 +232,29 @@ def test_fp8_automatic_upcasting():
         print(f"❌ FAILED: BF16 should stay BF16, got {bf16_param_upcast.dtype}")
         return False
 
-    # Check that FP8 parameters upcast to float32
+    # Check that FP8 parameters upcast to BF16
     fp8_param_upcast = params_upcast['block_0']['mlp']['mlp1_weight']
     print(f"FP8 after upcasting: {fp8_param_upcast.dtype}")
 
-    if fp8_param_upcast.dtype != jnp.float32:
-        print(f"❌ FAILED: Expected float32 after upcasting FP8, got {fp8_param_upcast.dtype}")
+    if fp8_param_upcast.dtype != jnp.bfloat16:
+        print(f"❌ FAILED: Expected bfloat16 after upcasting FP8, got {fp8_param_upcast.dtype}")
         return False
 
     print(f"✓ Confirmed BF16 preserved (not upcast)")
-    print(f"✓ Confirmed FP8 upcast to float32")
+    print(f"✓ Confirmed FP8 upcast to BF16 (safe upcast)")
 
-    # Verify FP8 values are preserved (within FP8 precision)
-    # Convert original FP8 to float32 for comparison
-    original_as_f32 = fp8_param.astype(jnp.float32)
-    max_diff = jnp.max(jnp.abs(original_as_f32 - fp8_param_upcast))
+    # Verify FP8 values are preserved (safe upcast to BF16)
+    # FP8 E4M3 fits exactly in BF16, so values should be identical
+    original_as_bf16 = fp8_param.astype(jnp.bfloat16)
+    max_diff = jnp.max(jnp.abs(original_as_bf16 - fp8_param_upcast))
 
-    print(f"✓ Max difference after FP8 upcasting: {max_diff:.2e} (should be 0.0)")
+    print(f"✓ Max difference after FP8→BF16 upcasting: {max_diff:.2e} (should be 0.0)")
 
     if max_diff > 1e-10:
         print(f"❌ FAILED: Upcasting changed FP8 values (max diff: {max_diff})")
         return False
 
-    print(f"\n✅ TEST 3 PASSED: Automatic upcasting preserves values\n")
+    print(f"\n✅ TEST 3 PASSED: Automatic FP8→BF16 upcasting preserves values\n")
     return True
 
 
@@ -276,7 +276,7 @@ def main():
     results.append(("Harmony Protocol Inference", test_fp8_harmony_inference()))
 
     # Test 3: Automatic upcasting
-    results.append(("Automatic FP8→float32 Upcasting", test_fp8_automatic_upcasting()))
+    results.append(("Automatic FP8→BF16 Upcasting", test_fp8_automatic_upcasting()))
 
     # Summary
     print("\n" + "="*80)

@@ -22,28 +22,32 @@ from .config import ModelConfig
 
 
 def upcast_fp8_params(params):
-    """Upcast FP8 parameters to float32 for computation (preserves BF16).
+    """Upcast FP8 parameters to BF16 for mixed-precision inference.
 
-    JAX doesn't support FP8 operations yet, so we need to upcast FP8 weights
-    to float32 before use. This is applied automatically during inference.
+    JAX doesn't support FP8 operations, so we upcast FP8→BF16. This is safe
+    because BF16 has wider range (8 exp bits vs 4) and precision (7 mantissa
+    bits vs 3), so all FP8 values fit exactly in BF16.
 
-    Mixed-precision support:
-    - FP8 (float8_e4m3fn) → float32 (required for JAX operations)
-    - BF16 (bfloat16) → stays BF16 (no quality loss)
+    Dtype promotion:
+    - FP8 (float8_e4m3fn) → BF16 (safe upcast, exact representation)
+    - BF16 (bfloat16) → unchanged (already BF16)
     - Other dtypes → unchanged
+
+    Memory efficiency: BF16 (2 bytes) vs float32 (4 bytes)
 
     Args:
         params: Model parameters (PyTree)
 
     Returns:
-        Parameters with FP8 tensors converted to float32, BF16 preserved
+        Parameters with FP8 tensors upcast to BF16, others unchanged
     """
-    def upcast_if_fp8(x):
+    def upcast_fp8_to_bf16(x):
         if isinstance(x, jax.Array) and x.dtype == jnp.float8_e4m3fn:
-            return x.astype(jnp.float32)
-        return x  # Preserve BF16, float32, etc.
+            # Safe upcast: FP8 E4M3 fits exactly in BF16
+            return x.astype(jnp.bfloat16)
+        return x  # Preserve BF16 and other dtypes
 
-    return jax.tree_util.tree_map(upcast_if_fp8, params)
+    return jax.tree_util.tree_map(upcast_fp8_to_bf16, params)
 
 # Import KVCache for type hints (will be imported at runtime when needed)
 try:
@@ -804,6 +808,12 @@ class MLPBlock(nn.Module):
         expert_logits, expert_indices = jax.lax.top_k(g, experts_per_token)
         expert_weights = jax.nn.softmax(expert_logits, axis=-1)  # [n_tokens, experts_per_token]
 
+        # DEBUG: Check for NaNs in expert routing
+        if jnp.any(jnp.isnan(g)):
+            raise ValueError(f"MLPBlock DEBUG: NaN in gate logits! g dtype={g.dtype}, t dtype={t.dtype}")
+        if jnp.any(jnp.isnan(expert_weights)):
+            raise ValueError(f"MLPBlock DEBUG: NaN in expert_weights after softmax! expert_logits={expert_logits}")
+
         # Validate expert routing
         assert expert_indices.shape == (n_tokens, experts_per_token), \
             f"MLPBlock: Expert indices shape mismatch, expected ({n_tokens}, {experts_per_token}), got {expert_indices.shape}"
@@ -912,7 +922,13 @@ class MLPBlock(nn.Module):
 
             # Apply MLP1: batched matmul for each token-expert pair
             mlp1_out = jnp.einsum('beck,bek->bec', selected_mlp1_weight, t_expanded) + selected_mlp1_bias
+            # DEBUG: Check after MLP1
+            if jnp.any(jnp.isnan(mlp1_out)):
+                raise ValueError(f"MLPBlock DEBUG: NaN after MLP1! mlp1_weight dtype={selected_mlp1_weight.dtype}, t dtype={t_expanded.dtype}")
             mlp1_out = swiglu(mlp1_out, limit=self.config.swiglu_limit)
+            # DEBUG: Check after SwiGLU
+            if jnp.any(jnp.isnan(mlp1_out)):
+                raise ValueError(f"MLPBlock DEBUG: NaN after SwiGLU!")
 
             # Gather MLP2 weights and biases
             selected_mlp2_weight = mlp2_weight[expert_indices]
