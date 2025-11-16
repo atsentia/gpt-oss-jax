@@ -50,16 +50,21 @@ jupyter lab examples/jax_inference.ipynb
 
 Run on Google Cloud TPU with one click:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/atsentia/gpt-oss-jax/blob/main/examples/jax_inference_colab_tpu.ipynb)
+**TPU v6e (Recommended)** - FP8 mixed precision, $2.80/hour:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/atsentia/gpt-oss-jax/blob/main/examples/jax_inference_tpu_v6e_direct.ipynb)
 
-The TPU notebook demonstrates adaptive precision strategies:
-- **TPU v2-8**: BF16 (16-bit) - ~42GB memory
-- **TPU v6e**: FP8 (8-bit) - ~21GB memory
+**TPU v2-8 (Fallback)** - Full BF16, $8/hour:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/atsentia/gpt-oss-jax/blob/main/examples/jax_inference_tpu_v2_bf16.ipynb)
+
+**Comparison:**
+- **TPU v6e**: 32GB HBM, FP8 experts (14GB weights) + BF16 small params = ~17GB total
+- **TPU v2-8**: 64GB shared HBM, all-BF16 (21GB weights) = ~24GB total
 
 ## Examples
 
 - **[Local Notebook](examples/jax_inference.ipynb)** - CPU inference with Harmony demo
-- **[Colab TPU Notebook](examples/jax_inference_colab_tpu.ipynb)** - Cloud TPU with adaptive precision
+- **[TPU v6e Notebook](examples/jax_inference_tpu_v6e_direct.ipynb)** - Direct SafeTensors→FP8/BF16 loading
+- **[TPU v2-8 Notebook](examples/jax_inference_tpu_v2_bf16.ipynb)** - All-BF16 fallback for older TPUs
 
 ## Resources
 
