@@ -31,6 +31,7 @@ class ModelConfig:
         use_flash_attention: Whether to use FlashAttention for memory-efficient attention
         optimize_gqa: Whether to use broadcast-based GQA optimization (avoid K/V expansion)
         optimize_moe: Whether to use token grouping for MoE (better cache locality)
+        use_scan_layers: Whether to use lax.scan for transformer layers (faster compilation)
     """
     num_hidden_layers: int = 24
     num_experts: int = 128
@@ -51,6 +52,7 @@ class ModelConfig:
     use_flash_attention: bool = False
     optimize_gqa: bool = False
     optimize_moe: bool = False
+    use_scan_layers: bool = False
     quantize_kv_cache: bool = False
 
     def __post_init__(self):
