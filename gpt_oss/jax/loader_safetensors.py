@@ -290,8 +290,18 @@ class WeightLoader:
 
         Uses pre-opened file handles to avoid repeated file opens.
         """
-        assert name in self.tensor_to_file, \
-            f"WeightLoader._get_tensor: Tensor '{name}' not found in checkpoint"
+        if name not in self.tensor_to_file:
+            # Debug: show similar names to help diagnose the issue
+            similar = [k for k in self.tensor_to_file.keys() if 'block.24.attn.norm' in k or 'block_24.attn.norm' in k]
+            if similar:
+                raise AssertionError(
+                    f"WeightLoader._get_tensor: Tensor '{name}' not found in checkpoint.\n"
+                    f"Similar names found: {similar}"
+                )
+            else:
+                raise AssertionError(
+                    f"WeightLoader._get_tensor: Tensor '{name}' not found in checkpoint"
+                )
 
         safetensor_file = self.tensor_to_file[name]
         return self.file_handles[safetensor_file].get_tensor(name)

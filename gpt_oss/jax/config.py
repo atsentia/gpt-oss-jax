@@ -32,7 +32,7 @@ class ModelConfig:
         optimize_gqa: Whether to use broadcast-based GQA optimization (avoid K/V expansion)
         optimize_moe: Whether to use token grouping for MoE (better cache locality)
     """
-    num_hidden_layers: int = 36
+    num_hidden_layers: int = 24
     num_experts: int = 128
     experts_per_token: int = 4
     vocab_size: int = 201088
