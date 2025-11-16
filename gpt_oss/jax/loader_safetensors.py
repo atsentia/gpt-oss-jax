@@ -324,17 +324,35 @@ class WeightLoader:
 
         return decompress_mxfp4(blocks, scales, target_shape)
 
-    def load_params(self, config: ModelConfig, show_progress: bool = True) -> Dict[str, Any]:
+    def load_params(
+        self,
+        config: ModelConfig,
+        show_progress: bool = True,
+        target_dtype: Optional[jnp.dtype] = None
+    ) -> Dict[str, Any]:
         """Load all model parameters from checkpoint.
 
         Args:
             config: Model configuration
             show_progress: Show progress bar during loading
+            target_dtype: Target dtype for loaded parameters (default: bfloat16)
+                         Use jnp.float8_e4m3fn for FP8 to reduce memory usage
 
         Returns:
             Flax parameter dictionary suitable for model.apply({'params': params}, ...)
+
+        Example:
+            # Load as BF16 (default)
+            >>> params = loader.load_params(config)
+
+            # Load directly as FP8 (saves memory on TPU v6e)
+            >>> params = loader.load_params(config, target_dtype=jnp.float8_e4m3fn)
         """
         import time
+
+        # Default to bfloat16 if not specified
+        if target_dtype is None:
+            target_dtype = jnp.bfloat16
 
         # Create parameter name mapping
         param_mapping = create_param_name_mapping(num_layers=config.num_hidden_layers)
@@ -369,7 +387,8 @@ class WeightLoader:
                         tensor = tensor.T
 
                     t_jax_start = time.time()
-                    flat_params[flax_path] = jnp.array(tensor, dtype=jnp.bfloat16)
+                    # Convert to target dtype immediately to avoid BF16 memory spike
+                    flat_params[flax_path] = jnp.array(tensor, dtype=target_dtype)
                     time_jax_convert += time.time() - t_jax_start
 
                 else:
@@ -382,7 +401,11 @@ class WeightLoader:
                     time_io += time.time() - t_io_start
 
                     t_decompress_start = time.time()
-                    flat_params[flax_path] = self._get_mxfp4_tensor_3d(blocks_name, scales_name)
+                    mxfp4_tensor = self._get_mxfp4_tensor_3d(blocks_name, scales_name)
+                    # MXFP4 decompresses to BF16, convert to target dtype if needed
+                    if target_dtype != jnp.bfloat16:
+                        mxfp4_tensor = mxfp4_tensor.astype(target_dtype)
+                    flat_params[flax_path] = mxfp4_tensor
                     time_decompress += time.time() - t_decompress_start
 
             else:
@@ -392,19 +415,21 @@ class WeightLoader:
                 time_io += time.time() - t_io_start
 
                 t_jax_start = time.time()
-                flat_params[flax_path] = jnp.array(tensor, dtype=jnp.bfloat16)
+                # Convert to target dtype immediately to avoid BF16 memory spike
+                flat_params[flax_path] = jnp.array(tensor, dtype=target_dtype)
                 time_jax_convert += time.time() - t_jax_start
 
             # Log first few parameters
             if idx < 3:
                 t_total = time.time() - t_start
-                print(f"\n[Param {idx}] {flax_path}: {t_total:.3f}s")
+                print(f"\n[Param {idx}] {flax_path}: {t_total:.3f}s (dtype={target_dtype})")
 
         # Convert flat dict to nested dict for Flax
         params = traverse_util.unflatten_dict(flat_params)
 
         if show_progress:
             print(f"\n✓ Loaded {len(flat_params)} parameters")
+            print(f"  Target dtype: {target_dtype}")
             print(f"Timing breakdown:")
             print(f"  I/O (SafeTensors): {time_io:.2f}s")
             print(f"  MXFP4 decompress: {time_decompress:.2f}s")
