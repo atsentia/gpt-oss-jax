@@ -64,7 +64,18 @@ pip install -e ".[jax,notebook]"
 
 ## Jupyter Notebook Setup
 
-To use the Jupyter notebook (`examples/jax_inference.ipynb`), you need to:
+The repository includes an interactive notebook ([`examples/jax_inference.ipynb`](examples/jax_inference.ipynb)) with:
+
+- **Checkpoint loading** - Orbax and SafeTensors support
+- **Text generation** - Progress bars, statistics, and performance tracking
+- **Harmony protocol demo** - Color-coded multi-channel reasoning:
+  - **Blue box** - Original user message
+  - **Green box** - Harmony-formatted prompt with special tokens
+  - **Yellow box** - Raw generated response (with `<|channel|>` markup)
+  - **Green box** - Reasoning/Analysis (analysis channel)
+  - **Purple box** - Final Answer (final channel)
+
+### Setup Steps
 
 1. **Install notebook dependencies** (if not already done):
    ```bash
@@ -75,7 +86,7 @@ To use the Jupyter notebook (`examples/jax_inference.ipynb`), you need to:
    ```bash
    # Activate the virtual environment first
    source .venv/bin/activate
-   
+
    # Create the kernel
    python -m ipykernel install --user --name=jax-for-gpt-oss --display-name "Python (jax-for-gpt-oss)"
    ```
@@ -84,7 +95,7 @@ To use the Jupyter notebook (`examples/jax_inference.ipynb`), you need to:
    ```bash
    # Make sure venv is activated
    source .venv/bin/activate
-   
+
    # Launch Jupyter Lab
    jupyter lab examples/jax_inference.ipynb
    ```
@@ -92,6 +103,20 @@ To use the Jupyter notebook (`examples/jax_inference.ipynb`), you need to:
 4. **Select the kernel** in Jupyter Lab:
    - The notebook should automatically use the `Python (jax-for-gpt-oss)` kernel
    - If not, click the kernel name in the top right and select "Python (jax-for-gpt-oss)"
+
+### What the Notebook Demonstrates
+
+The final section of the notebook demonstrates the **Harmony protocol**, which enables GPT-OSS-20B to output:
+
+1. **Reasoning** (analysis channel) - The model's internal thought process
+2. **Final Answer** (final channel) - The polished response to the user
+
+Example output for "What is the capital of France?":
+
+- **Analysis channel**: `"We need to answer the question: 'What is the capital of France?' The answer: Paris."`
+- **Final channel**: `"The capital of France is **Paris**."`
+
+This multi-channel approach provides transparency into the model's reasoning while delivering clean final answers.
 
 ### Verify Kernel Installation
 

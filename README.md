@@ -1,136 +1,87 @@
 # JAX for GPT-OSS
 
-JAX backend for GPT-OSS models, optimized for CPU/TPU inference.
-
-## Features
-
-- **Fast Loading:** Orbax checkpoints load 18x faster than SafeTensors (~5s vs ~90s)
-- **Efficient Generation:** KV caching for O(n) complexity
-- **Cross-Platform:** Works on CPU, GPU (CUDA/ROCm/Metal), and TPU
-- **XLA Compilation:** Automatic optimization and kernel fusion
-- **Jupyter Notebooks:** Interactive examples with progress bars and statistics
+JAX backend for GPT-OSS models with Harmony protocol support, optimized for CPU/TPU inference.
 
 ## Quick Start
 
-### Installation
-
 ```bash
-# Create virtual environment (using uv)
+# Install dependencies
 uv venv
-
-# Install with JAX support
-uv pip install -e ".[jax]"
-
-# Or install with JAX + notebook support
 uv pip install -e ".[jax,notebook]"
-```
 
-For detailed installation instructions, see [INSTALL.md](INSTALL.md).
+# Setup checkpoint (symlink recommended)
+ln -s /path/to/checkpoint weights/gpt-oss-20b
 
-### Basic Usage
-
-```python
-from gpt_oss.jax import TokenGenerator
-import jax
-
-# Initialize generator (auto-detects Orbax or SafeTensors)
-generator = TokenGenerator("path/to/checkpoint", max_context_length=4096)
-
-# Generate tokens
-prompt_tokens = [1, 2, 3]  # Your prompt tokens
-for token, logprob in generator.generate(prompt_tokens, max_tokens=50, temperature=0.8):
-    print(f"Token: {token}")
-```
-
-### Jupyter Notebook
-
-```bash
-# Activate virtual environment
+# Launch interactive notebook
 source .venv/bin/activate
-
-# Launch Jupyter Lab
+python -m ipykernel install --user --name=jax-for-gpt-oss
 jupyter lab examples/jax_inference.ipynb
 ```
 
-The notebook includes:
-- Checkpoint loading (Orbax/SafeTensors)
-- Model initialization
-- Text generation with progress bars
-- Performance statistics (TTFT, tokens/second)
-- Temperature sampling examples
+See [INSTALL.md](INSTALL.md) for detailed installation instructions.
 
-## Checkpoints
+## Features
 
-### Setup Checkpoint Directory
+- **Fast Loading** - Orbax checkpoints load in ~5s (vs ~90s for SafeTensors)
+- **Harmony Protocol** - Multi-channel reasoning with color-coded output (analysis + final answer)
+- **KV Caching** - Efficient autoregressive generation
+- **XLA Compilation** - Automatic optimization and kernel fusion
+- **Interactive Notebook** - Progress bars, statistics, and visualization
 
-**Recommended**: Create a symlink in the `weights/` directory:
+## Harmony Protocol Demo
 
-```bash
-# From the repository root
-ln -s /path/to/your/checkpoint weights/gpt-oss-20b
+The [Jupyter notebook](examples/jax_inference.ipynb) includes a complete Harmony protocol demonstration with color-coded output:
+
+- **Blue box** - Original user message
+- **Green box** - Harmony-formatted prompt with special tokens
+- **Yellow box** - Raw generated response
+- **Green box** - Reasoning/Analysis (analysis channel)
+- **Purple box** - Final Answer (final channel)
+
+## Basic Usage
+
+```python
+from gpt_oss.jax import TokenGenerator
+
+# Initialize generator (auto-detects Orbax or SafeTensors)
+generator = TokenGenerator("weights/gpt-oss-20b", max_context_length=4096)
+
+# Generate text
+response = generator.generate(
+    prompt="What is the capital of France?",
+    temperature=0.0,
+    max_new_tokens=50
+)
+print(response)
 ```
-
-This allows using relative paths in notebooks and scripts: `weights/gpt-oss-20b`
-
-See [weights/README.md](weights/README.md) for more details.
-
-### Orbax Format (Recommended)
-
-Fast loading (~5 seconds):
-
-```bash
-# Use Orbax checkpoint
-python -m gpt_oss.generate --backend jax weights/gpt-oss-20b "Your prompt"
-```
-
-### SafeTensors Format
-
-Slower loading (~90 seconds) but cross-framework compatible:
-
-```bash
-python -m gpt_oss.generate --backend jax weights/gpt-oss-20b-safetensors "Your prompt"
-```
-
-## Performance
-
-| Platform | Loading Time | Tokens/Second | Notes |
-|----------|--------------|---------------|-------|
-| CPU (M3 Max) | ~5s (Orbax) | 10-20 | Good for development |
-| TPU v4-8 | ~5s (Orbax) | 200-500 | Production inference |
-| TPU v5e-8 | ~5s (Orbax) | 300-700 | Cost-effective |
-| TPU v6e (Trillium) | ~5s (Orbax) | 500-1000+ | Latest hardware |
 
 ## Examples
 
-- [Local Jupyter Notebook](examples/jax_inference.ipynb) - Interactive inference tutorial
-- [CLI Script](bin/run_jax_inference.sh) - Command-line inference example
+- **[Interactive Notebook](examples/jax_inference.ipynb)** - Full tutorial with Harmony demo
+- **[Shell Script](bin/run_harmony_example.sh)** - CLI example with colored terminal output
+
+## Performance
+
+| Platform | Loading | Tokens/s | Use Case |
+|----------|---------|----------|----------|
+| CPU (M3 Max) | ~5s | 0.5-1.0 | Development |
+| TPU v4-8 | ~5s | 200-500 | Production |
+| TPU v5e-8 | ~5s | 300-700 | Cost-effective |
 
 ## Requirements
 
 - Python >= 3.12
 - JAX >= 0.4.20
-- Flax >= 0.8.0
-- See [INSTALL.md](INSTALL.md) for full dependency list
+- openai-harmony (for Harmony protocol)
 
-## Development
-
-```bash
-# Install development dependencies
-uv pip install -e ".[dev]"
-
-# Run tests
-pytest tests/jax -v
-
-# Skip slow tests
-pytest tests/jax -m "not slow" -v
-```
+See [INSTALL.md](INSTALL.md) for complete dependency list.
 
 ## License
 
-Apache 2.0 - see [LICENSE](LICENSE) file.
+Apache 2.0 - see [LICENSE](LICENSE)
 
 ## Resources
 
 - [JAX Documentation](https://jax.readthedocs.io/)
-- [Flax Documentation](https://flax.readthedocs.io/)
 - [GPT-OSS-20B Model Card](https://huggingface.co/atsentia/gpt-oss-20b)
+- [Harmony Protocol](https://github.com/openai/harmony)
