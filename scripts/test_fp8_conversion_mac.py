@@ -50,10 +50,17 @@ def main():
     parser.add_argument(
         "--output",
         type=str,
-        default="gpt-oss-20b-orbax-fp8",
-        help="Output Orbax checkpoint directory"
+        default=None,
+        help="Output Orbax checkpoint directory (default: ./gpt-oss-20b-orbax-fp8)"
     )
     args = parser.parse_args()
+
+    # Convert paths to absolute
+    safetensors_path = Path(args.path).resolve()
+    if args.output:
+        orbax_path = str(Path(args.output).resolve())
+    else:
+        orbax_path = str(Path.cwd() / "gpt-oss-20b-orbax-fp8")
 
     print("=" * 70)
     print("FP8 CONVERSION TEST - MAC M3 ULTRA")
@@ -80,9 +87,6 @@ def main():
     # STEP 2: Validate Paths
     # =========================================================================
     print("\n[2/5] Validating paths...")
-
-    safetensors_path = Path(args.path)
-    orbax_path = args.output
 
     if not safetensors_path.exists():
         print(f"  ✗ ERROR: Path does not exist: {safetensors_path}")
