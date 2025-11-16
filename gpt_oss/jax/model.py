@@ -15,6 +15,7 @@ from typing import Any, Optional, List
 
 import jax
 import jax.numpy as jnp
+from jax import lax
 from flax import linen as nn
 
 from .config import ModelConfig
@@ -993,11 +994,15 @@ class Transformer(nn.Module):
 
     Attributes:
         config: Model configuration
+        use_scan_layers: If True, use nn.scan for transformer layers (faster compilation)
+                        Note: This is a future optimization - currently disabled due to 
+                        complexity with KV caching and variable layer_idx handling
     """
     config: ModelConfig
     use_flash_attention: bool = False
     optimize_gqa: bool = False
     optimize_moe: bool = False
+    use_scan_layers: bool = False
 
     @nn.compact
     def __call__(self, x: jax.Array, kv_caches: Optional[List[Any]] = None) -> tuple[jax.Array, Optional[List[Any]]]:
@@ -1041,6 +1046,8 @@ class Transformer(nn.Module):
             f"Transformer: Embedding output shape mismatch, expected ({n_tokens}, {self.config.hidden_size}), got {h.shape}"
 
         # Transformer blocks
+        # Note: use_scan_layers optimization is planned for future but currently
+        # Python loops are used as they're simpler with KV caching and layer-specific logic
         updated_caches = [] if kv_caches is not None else None
         for layer_idx in range(self.config.num_hidden_layers):
             block = TransformerBlock(
