@@ -213,3 +213,9 @@ weights/*
 !weights/.gitkeep
 !weights/README.md
 .DS_Store
+
+# Model checkpoints and Orbax files (multi-GB files)
+gpt-oss-20b-orbax-mixed/
+*-orbax-mixed/
+*.ocdbt
+ocdbt.process_*/
