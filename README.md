@@ -56,6 +56,14 @@ Run on Google Cloud TPU with one click:
 **TPU v2-8 (Fallback)** - Full BF16, $8/hour:
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/atsentia/gpt-oss-jax/blob/main/examples/jax_inference_tpu_v2_bf16.ipynb)
 
+**Additional Examples:**
+
+**Hybrid Inference** - FP8/BF16 mixed precision:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/atsentia/gpt-oss-jax/blob/main/examples/GPT_OSS_20B_Hybrid_Inference.ipynb)
+
+**MaxText Inference** - MaxText framework integration:
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/atsentia/gpt-oss-jax/blob/main/examples/GPT_OSS_20B_MaxText_Inference.ipynb)
+
 **Comparison:**
 - **TPU v6e**: 32GB HBM, FP8 experts (14GB weights) + BF16 small params = ~17GB total
 - **TPU v2-8**: 64GB shared HBM, all-BF16 (21GB weights) = ~24GB total
@@ -65,6 +73,8 @@ Run on Google Cloud TPU with one click:
 - **[Local Notebook](examples/jax_inference.ipynb)** - CPU inference with Harmony demo
 - **[TPU v6e Notebook](examples/jax_inference_tpu_v6e_direct.ipynb)** - Direct SafeTensors→FP8/BF16 loading
 - **[TPU v2-8 Notebook](examples/jax_inference_tpu_v2_bf16.ipynb)** - All-BF16 fallback for older TPUs
+- **[Hybrid Inference Notebook](examples/GPT_OSS_20B_Hybrid_Inference.ipynb)** - FP8/BF16 mixed precision inference
+- **[MaxText Inference Notebook](examples/GPT_OSS_20B_MaxText_Inference.ipynb)** - MaxText framework integration
 
 ## Resources
 
